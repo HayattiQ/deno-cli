@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "license": "MIT",
   "exports": "./mod.ts",
-  // deno-lib用サンプル設定
+  // deno-cli用サンプル設定
   "compilerOptions": {
     "lib": ["deno.ns", "deno.unstable", "dom"]
   },

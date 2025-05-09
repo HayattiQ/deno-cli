@@ -76,12 +76,12 @@ function generateOptionsFromSchema<S extends z.ZodObject<any, any>>(
     // Reason: Accessing Zod's internal _def.
     // deno-lint-ignore no-explicit-any
     if ((unwrappedSchema._def as any).typeName === "ZodEffects") {
-        // Reason: Accessing Zod's internal _def.
-        // deno-lint-ignore no-explicit-any
-        const effectDef = unwrappedSchema._def as any;
-        descriptionFromSchema = effectDef.description || descriptionFromSchema;
-        metaFromSchema = effectDef.meta || metaFromSchema;
-        unwrappedSchema = effectDef.schema; // 内側のスキーマで unwrappedSchema を更新
+      // Reason: Accessing Zod's internal _def.
+      // deno-lint-ignore no-explicit-any
+      const effectDef = unwrappedSchema._def as any;
+      descriptionFromSchema = effectDef.description || descriptionFromSchema;
+      metaFromSchema = effectDef.meta || metaFromSchema;
+      unwrappedSchema = effectDef.schema; // 内側のスキーマで unwrappedSchema を更新
     }
 
     // currentSchemaForProps と def は (場合によっては ZodEffects を剥がした後の) unwrappedSchema から初期化
@@ -99,25 +99,29 @@ function generateOptionsFromSchema<S extends z.ZodObject<any, any>>(
       // Optional/Nullable を剥がした後、再度 description/meta を取得し直す
       // Reason: Accessing Zod's internal _def.
       // deno-lint-ignore no-explicit-any
-      descriptionFromSchema = (currentSchemaForProps._def as any).description || descriptionFromSchema;
+      descriptionFromSchema = (currentSchemaForProps._def as any).description ||
+        descriptionFromSchema;
       // Reason: Accessing Zod's internal _def.
       // deno-lint-ignore no-explicit-any
-      metaFromSchema = (currentSchemaForProps._def as any).meta || metaFromSchema;
+      metaFromSchema = (currentSchemaForProps._def as any).meta ||
+        metaFromSchema;
     }
     if (typeName === "ZodDefault") {
       generatedParseOptions.default[kebabKey] = def.defaultValue();
       currentSchemaForProps = def.innerType; // currentSchemaForProps を内側の型に更新
-      def = def.innerType._def; 
+      def = def.innerType._def;
       typeName = def.typeName;
       // Default を剥がした後、再度 description/meta を取得し直す
       // Reason: Accessing Zod's internal _def.
       // deno-lint-ignore no-explicit-any
-      descriptionFromSchema = (currentSchemaForProps._def as any).description || descriptionFromSchema;
+      descriptionFromSchema = (currentSchemaForProps._def as any).description ||
+        descriptionFromSchema;
       // Reason: Accessing Zod's internal _def.
       // deno-lint-ignore no-explicit-any
-      metaFromSchema = (currentSchemaForProps._def as any).meta || metaFromSchema;
+      metaFromSchema = (currentSchemaForProps._def as any).meta ||
+        metaFromSchema;
     }
-    
+
     const finalDescription = descriptionFromSchema || "";
     const finalMeta = metaFromSchema;
 
@@ -198,12 +202,7 @@ export function processArgs<S extends z.ZodObject<any, any>>(
   let finalParseOptions = options.parseArgsOptions;
   let finalHelpSections = options.helpSections;
 
-  // logger.debug("clear") // logger を console に置き換えたので、この行はそのまま logger.debug を使う
-  // console.debug("[deno-lib/args] processArgs: entry");
   if (!finalParseOptions || !finalHelpSections) {
-    // console.debug(
-    //   "[deno-lib/args] Generating parseOptions or helpSections from schema...",
-    // );
     const { generatedParseOptions, generatedHelpSections } =
       generateOptionsFromSchema(
         zodSchema,
@@ -215,7 +214,6 @@ export function processArgs<S extends z.ZodObject<any, any>>(
       finalHelpSections = generatedHelpSections;
     }
   }
-  // console.log("clear") // デバッグ用 console.log は削除またはコメントアウト
 
   // parseArgsOptionsに help エイリアスを自動的に追加する (generateOptionsFromSchemaで処理済みなら不要だが念のため)
   const ensuredParseOptions: ParseOptions = {
@@ -229,16 +227,9 @@ export function processArgs<S extends z.ZodObject<any, any>>(
     alias: { ...(finalParseOptions?.alias || {}), h: "help" },
   };
 
-  // console.debug("[deno-lib/args] Ensured parseOptions:", ensuredParseOptions);
   const rawArgs = parseArgs(rawDenoArgs, ensuredParseOptions);
-  // console.debug("[deno-lib/args] Raw parsed args:", rawArgs);
-  // console.log("clear") // デバッグ用 console.log は削除またはコメントアウト
 
   if (rawArgs.help) {
-    // console.log(rawArgs) // デバッグ用 console.log は削除またはコメントアウト
-    // console.debug(
-    //   "--help オプションが検出されました。ヘルプメッセージを生成・表示します。",
-    // );
     if (customHelpGeneration) {
       const helpMsg = customHelpGeneration(
         zodSchema,
@@ -246,7 +237,6 @@ export function processArgs<S extends z.ZodObject<any, any>>(
         commandDescription,
       );
       console.info(helpMsg);
-      // console.debug("カスタムヘルプメッセージを表示しました。");
     } else {
       let helpMessage = `使用方法: ${commandName} [options]\n`;
       if (commandDescription) {
@@ -266,7 +256,6 @@ export function processArgs<S extends z.ZodObject<any, any>>(
         }
       }
       console.info(helpMessage);
-      // console.debug("自動生成されたヘルプメッセージを表示しました。");
     }
     Deno.exit(0);
   }
@@ -274,14 +263,10 @@ export function processArgs<S extends z.ZodObject<any, any>>(
   try {
     return zodSchema.parse(rawArgs) as z.infer<S>;
   } catch (error) {
-    console.error("引数の検証に失敗しました。", { errorObject: error }); 
+    console.error("引数の検証に失敗しました。", { errorObject: error });
     if (error instanceof z.ZodError) {
       console.info("エラーは ZodError のインスタンスです。");
-      // Zod v4では error.issues を使用
       if (Array.isArray(error.issues)) {
-        // console.debug("error.issues は配列です。詳細:", {
-        //   issues: error.issues,
-        // });
         for (const issue of error.issues) {
           const path = Array.isArray(issue.path)
             ? issue.path.join(".")

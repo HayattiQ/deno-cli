@@ -43,7 +43,7 @@ async function main() {
     const args = processArgs(Deno.args, {
       zodSchema: ExampleSchema,
       commandName: SCRIPT_NAME,
-      commandDescription: "deno-libの機能を使ったシンプルなCLIサンプルです。",
+      commandDescription: "deno-cliの機能を使ったシンプルなCLIサンプルです。",
       helpSections: [baseArgsHelpInfo, exampleSchemaHelpInfo, commonHelpInfo], // 配列で渡す
     });
 

@@ -1,4 +1,4 @@
-# deno-lib
+# deno-cli
 
 このモジュールは、Deno環境でのCLIスクリプト開発における共通ユーティリティを提供します。主に引数スキーマの定義・検証とログ初期化・ロガー取得機能を含みます。
 
@@ -31,7 +31,7 @@
 ```json
 {
   "imports": {
-    "deno-lib/": "jsr:@hayatti/deno-lib@^0.1.0" // JSRのバージョンは適宜最新のものに置き換えてください
+    "deno-cli/": "jsr:@hayatti/deno-cli@^0.1.0" // JSRのバージョンは適宜最新のものに置き換えてください
   }
 }
 ```
@@ -40,14 +40,14 @@
 
 ---
 
-## CLIスクリプトの基本的な作り方 (deno-lib を使用)
+## CLIスクリプトの基本的な作り方 (deno-cli を使用)
 
-このセクションでは、`deno-lib`
+このセクションでは、`deno-cli`
 を使用してCLIスクリプトを作成する基本的な手順とベストプラクティスを説明します。
 
 ### 1. 引数の定義と解析
 
-`deno-lib` は Zod を利用してコマンドライン引数を型安全に解析します。
+`deno-cli` は Zod を利用してコマンドライン引数を型安全に解析します。
 `processArgs` 関数と、事前に定義されたスキーマ (`BaseArgsSchema`,
 `EthArgsSchema` など) を利用できます。
 
@@ -55,7 +55,7 @@
 
 ```typescript
 // my_script.ts
-import { BaseArgsSchema, processArgs } from "deno-lib/mod.ts"; // JSR経由の場合は "jsr:@hayatti/deno-lib/mod.ts"
+import { BaseArgsSchema, processArgs } from "deno-cli/mod.ts"; // JSR経由の場合は "jsr:@hayatti/deno-cli/mod.ts"
 import { z } from "npm:zod"; // プロジェクトのdeno.jsonでzodをimportしている想定
 
 // BaseArgsSchema を拡張して、このスクリプト特有の引数を追加
@@ -95,7 +95,7 @@ try {
 
 ```typescript
 // my_eth_script.ts
-import { EthArgsSchema, processArgs } from "deno-lib/mod.ts";
+import { EthArgsSchema, processArgs } from "deno-cli/mod.ts";
 import { z } from "npm:zod";
 
 // EthArgsSchema をベースに、このスクリプト特有の引数を追加
@@ -133,11 +133,11 @@ try {
 
 ### 2. ロギングの設定と利用
 
-`deno-lib` を使うと、コンソールとファイルへのログ出力を簡単に設定できます。
+`deno-cli` を使うと、コンソールとファイルへのログ出力を簡単に設定できます。
 
 ```typescript
 // my_script.ts (引数解析の後)
-import { createLogger, logConfigure, type LogLevel } from "deno-lib/mod.ts";
+import { createLogger, logConfigure, type LogLevel } from "deno-cli/mod.ts";
 import { basename } from "jsr:@std/path/basename"; // jsr:@std/path から basename をインポート
 
 // スクリプト名を取得 (ログファイル名などに使用)
@@ -202,7 +202,7 @@ if (import.meta.main) {
 
 ### 3. 構造化ロギングとプレースホルダー
 
-LogTape ( `deno-lib` が内部で使用)
+LogTape ( `deno-cli` が内部で使用)
 は、メッセージ内のプレースホルダーと構造化データによるロギングをサポートします。
 
 - メッセージ:
@@ -232,7 +232,7 @@ logger.error(
 
 ### 4. ログレベル
 
-`deno-lib` は以下のログレベルをサポートします (`BaseArgsSchema` の `logLevel`
+`deno-cli` は以下のログレベルをサポートします (`BaseArgsSchema` の `logLevel`
 で定義)。
 
 - `debug`: 開発用の詳細ログ。デバッグ時に役立つ情報を記録します。
@@ -313,7 +313,7 @@ logger.error(
 
 ## CLIスクリプト開発のベストプラクティス（参考）
 
-以下の内容は `deno-lib`
+以下の内容は `deno-cli`
 の直接的な機能ではありませんが、DenoでCLIスクリプトを開発する際の一般的なベストプラクティスとして参考にしてください。
 
 ### 推奨ディレクトリ構成
@@ -325,13 +325,13 @@ project-root/
 ├── scripts/         # CLIスクリプトのエントリーポイントやメインロジック
 │   ├── commands/    # サブコマンドごとの処理を記述するファイル群
 │   ├── components/  # 複数のスクリプトで再利用可能なビジネスロジック
-│   ├── schemas/     # Zodスキーマ定義（deno-libのスキーマとは別に、アプリ固有のものを置く場合）
+│   ├── schemas/     # Zodスキーマ定義（deno-cliのスキーマとは別に、アプリ固有のものを置く場合）
 │   └── utils/       # プロジェクト固有のユーティリティ関数（CSV処理、APIクライアントなど）
 ├── tests/           # Deno testランナーで実行するテストファイル
 ├── data/            # スクリプトが使用する固定データファイル (例: 設定JSON、マッピングCSV)
 │   ├── input/       # 処理対象の入力ファイル置き場 (例: バッチ処理用CSV)
 │   └── output/      # スクリプトの出力結果を保存する場所
-├── logs/            # スクリプトのログファイルが出力される場所 (deno-libのlogConfigureのデフォルト出力先)
+├── logs/            # スクリプトのログファイルが出力される場所 (deno-cliのlogConfigureのデフォルト出力先)
 ├── .env             # 環境変数ファイル (deno-dotenvなどで読み込む)
 ├── deno.jsonc       # Denoプロジェクトの設定ファイル
 └── README.md
@@ -344,13 +344,13 @@ project-root/
   - **`components/`**:
     特定のビジネスドメインに特化した再利用可能な関数やクラス群。
   - **`schemas/`**:
-    アプリケーション固有のデータ構造をZodで定義する場合。`deno-lib`が提供する引数スキーマとは別に管理します。
+    アプリケーション固有のデータ構造をZodで定義する場合。`deno-cli`が提供する引数スキーマとは別に管理します。
   - **`utils/`**:
     より汎用的なヘルパー関数。例えば、特定のAPIクライアントのラッパーや、特殊なファイル形式のパーサーなど。
 - **`data/`**: スクリプトが読み書きするデータファイルを配置します。
   - **`input/`**: スクリプトへの入力となるファイル（例: CSV、JSON）。
   - **`output/`**: スクリプトが生成したファイル（例: 結果CSV、レポート）。
-- **`logs/`**: `deno-lib` の `logConfigure` 関数は、デフォルトで
+- **`logs/`**: `deno-cli` の `logConfigure` 関数は、デフォルトで
   `logs/{scriptName}/` ディレクトリにログファイルを作成します。
 
 ### CSVファイルの取り扱い
