@@ -1,6 +1,6 @@
 {
   "name": "@hayattiq/deno-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "exports": "./mod.ts",
   // deno-cli用サンプル設定
