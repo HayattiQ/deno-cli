@@ -8,7 +8,9 @@ import type { HelpSection } from "./args.ts"; // HelpSection をインポート
 // Reason: Zod's inferred object shapes can be complex.
 // deno-lint-ignore no-explicit-any
 export const BaseArgsSchema: z.ZodObject<any> = z.object({
-  logLevel: z.enum(["debug", "info", "warn", "error"]).default("info").describe("ログの出力レベル").meta({ alias: "l" }),
+  logLevel: z.enum(["debug", "info", "warn", "error"]).default("info").describe(
+    "ログの出力レベル",
+  ).meta({ alias: "l" }),
 });
 
 /**
@@ -31,7 +33,9 @@ export const NetworkArgsSchema: z.ZodObject<any> = z.object({
 // Reason: Zod's inferred object shapes can be complex.
 // deno-lint-ignore no-explicit-any
 export const PrivateKeyArgsSchema: z.ZodObject<any> = z.object({
-  privateKey: z.string().optional().describe("秘密鍵（環境変数からの読み込みを推奨）").meta({ alias: "k" }),
+  privateKey: z.string().optional().describe(
+    "秘密鍵（環境変数からの読み込みを推奨）",
+  ).meta({ alias: "k" }),
 });
 
 /**
@@ -41,21 +45,24 @@ export const PrivateKeyArgsSchema: z.ZodObject<any> = z.object({
 // Reason: Zod's inferred object shapes can be complex.
 // deno-lint-ignore no-explicit-any
 export const RpcUrlArgsSchema: z.ZodObject<any> = z.object({
-  rpcUrl: z.string().optional().describe("RPC URL（指定がない場合はデフォルト値を使用）").meta({ alias: "r" }),
+  rpcUrl: z.string().optional().describe(
+    "RPC URL（指定がない場合はデフォルト値を使用）",
+  ).meta({ alias: "r" }),
 });
 
 export const baseArgsHelpInfo: HelpSection = {
   title: "基本オプション",
   options: {
-    "--log-level, -l <debug|info|warn|error>": "ログの出力レベル (デフォルト: info)",
-  }
+    "--log-level, -l <debug|info|warn|error>":
+      "ログの出力レベル (デフォルト: info)",
+  },
 };
 
 /**
  * Ethereum関連の操作に必要な引数をまとめたスキーマ
  * BaseArgsSchema, NetworkArgsSchema, PrivateKeyArgsSchema, RpcUrlArgsSchema を結合します。
  */
-export const EthArgsSchema = BaseArgsSchema
+export const EthArgsSchema: z.ZodObject = BaseArgsSchema
   .merge(NetworkArgsSchema)
   .merge(PrivateKeyArgsSchema)
   .merge(RpcUrlArgsSchema)
