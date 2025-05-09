@@ -1,0 +1,29 @@
+{
+  // deno-lib用サンプル設定
+  "compilerOptions": {
+    "lib": ["deno.ns", "deno.unstable", "dom"]
+  },
+  // "importMap": "./import_map.json", // この行を削除
+  "imports": {
+    "@logtape/file": "jsr:@logtape/file@^0.9.1",
+    "@logtape/logtape": "jsr:@logtape/logtape@^0.9.1",
+    "zod@next": "npm:zod@next"
+  },
+  // npmパッケージ（zod, logtape, logtape_file）利用のための設定
+  "npmSpecifierResolution": "node",
+  "lint": {
+    "files": {
+      "exclude": ["logs/", "*.log"]
+    }
+  },
+  "fmt": {
+    "files": {
+      "exclude": ["logs/", "*.log"]
+    }
+  },
+  "tasks": {
+    "test": "deno test --allow-all",
+    "lint": "deno lint",
+    "fmt": "deno fmt"
+  }
+}
