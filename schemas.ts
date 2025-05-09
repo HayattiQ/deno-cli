@@ -50,3 +50,13 @@ export const baseArgsHelpInfo: HelpSection = {
     "--log-level, -l <debug|info|warn|error>": "ログの出力レベル (デフォルト: info)",
   }
 };
+
+/**
+ * Ethereum関連の操作に必要な引数をまとめたスキーマ
+ * BaseArgsSchema, NetworkArgsSchema, PrivateKeyArgsSchema, RpcUrlArgsSchema を結合します。
+ */
+export const EthArgsSchema = BaseArgsSchema
+  .merge(NetworkArgsSchema)
+  .merge(PrivateKeyArgsSchema)
+  .merge(RpcUrlArgsSchema)
+  .describe("Ethereumネットワーク操作に関連する引数");
