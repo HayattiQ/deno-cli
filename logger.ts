@@ -1,7 +1,7 @@
-import { existsSync } from "jsr:@std/fs"; // フルURLに変更
-import { dirname, join } from "jsr:@std/path"; 
+import { existsSync } from "jsr:@std/fs@^1.0.15"; 
+import { dirname, join } from "jsr:@std/path@^1.0.8"; 
 import { getFileSink } from "@logtape/file";
-import type { FormattedValues, LogRecord } from "@logtape/logtape";
+import type { FormattedValues, LogRecord, Logger } from "@logtape/logtape";
 import {
 	configure,
 	getAnsiColorFormatter,
@@ -19,7 +19,7 @@ import {
 export async function logConfigure(
 	scriptName: string,
 	logLevel: "debug" | "info" | "warn" | "error",
-) {
+): Promise<string> { // 戻り値の型 Promise<string> を追加
 
 	// LogTapeのログレベルに変換
 	const logtapeLevel = logLevel === "warn" ? "warning" : logLevel;
@@ -99,6 +99,6 @@ export async function logConfigure(
  * @param scriptName スクリプト名（カテゴリ）
  * @returns ロガーインスタンス
  */
-export function createLogger(scriptName: string) {
+export function createLogger(scriptName: string): Logger { // Logger 型を指定
 	return getLogger(scriptName);
 }
