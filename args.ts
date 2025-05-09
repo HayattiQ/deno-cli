@@ -1,40 +1,5 @@
-import { type ParseOptions, parseArgs } from "jsr:@std/cli/parse-args";
+import { parseArgs, type ParseOptions } from "jsr:@std/cli/parse-args";
 import { z } from "zod@next";
-
-/**
- * 基本引数スキーマ
- * ログレベルやヘルプなど、多くのスクリプトで共通する基本的な引数を定義します。
- */
-export const BaseArgsSchema = z.object({
-  logLevel: z.enum(["debug", "info", "warn", "error"]).default("info").describe("ログの出力レベル"),
-});
-
-/**
- * ネットワーク指定に関する引数スキーマ
- * 接続するブロックチェーンネットワークを指定します。
- */
-export const NetworkArgsSchema = z.object({
-  network: z.enum(["sepolia", "kaia"]) // TODO: 利用可能なネットワークを動的に設定できるようにする
-    .default("sepolia")
-    .describe("接続するネットワーク (例: sepolia, kaia)")
-    .meta({ alias: "n" }),
-});
-
-/**
- * 秘密鍵に関する引数スキーマ
- * トランザクション署名などに使用する秘密鍵を指定します。
- */
-export const PrivateKeyArgsSchema = z.object({
-  privateKey: z.string().optional().describe("秘密鍵（環境変数からの読み込みを推奨）").meta({ alias: "k" }),
-});
-
-/**
- * RPC URLに関する引数スキーマ
- * ブロックチェーンネットワークへの接続に使用するRPC URLを指定します。
- */
-export const RpcUrlArgsSchema = z.object({
-  rpcUrl: z.string().optional().describe("RPC URL（指定がない場合はデフォルト値を使用）").meta({ alias: "r" }),
-});
 
 /**
  * ヘルプメッセージのセクションを定義するインターフェース
@@ -47,14 +12,19 @@ export interface HelpSection {
 /**
  * processArgs関数に渡すオプションを定義するインターフェース
  */
-// biome-ignore lint/suspicious/noExplicitAny: S uses any for ZodObject's complex internal types
-export interface ProcessArgsOptions<S extends z.ZodObject<any, any>> { // 型引数を2つに変更
+// Reason: ZodObject's generic type parameters are complex.
+// deno-lint-ignore no-explicit-any
+export interface ProcessArgsOptions<S extends z.ZodObject<any, any>> {
   zodSchema: S;
   parseArgsOptions?: ParseOptions; // オプショナルに変更
-  helpSections?: HelpSection[];   // オプショナルに変更
+  helpSections?: HelpSection[]; // オプショナルに変更
   commandName: string;
   commandDescription?: string;
-  customHelpGeneration?: (schema: S, commandName: string, commandDescription?: string) => string; // カスタムヘルプ生成用
+  customHelpGeneration?: (
+    schema: S,
+    commandName: string,
+    commandDescription?: string,
+  ) => string; // カスタムヘルプ生成用
 }
 
 // キャメルケースをケバブケースに変換するヘルパー関数
@@ -66,17 +36,22 @@ function camelToKebab(str: string): string {
  * ZodスキーマからparseArgsのオプションとヘルプセクションを自動生成する内部関数
  */
 
-interface InternalGeneratedParseOptions extends Omit<ParseOptions, 'string' | 'boolean' | 'alias' | 'default'> {
+interface InternalGeneratedParseOptions
+  extends Omit<ParseOptions, "string" | "boolean" | "alias" | "default"> {
   string: string[];
   boolean: string[];
   alias: Record<string, string>;
   default: Record<string, unknown>;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: S uses any for ZodObject's complex internal types
-function generateOptionsFromSchema<S extends z.ZodObject<any, any, any>>( 
+// Reason: ZodObject's generic type parameters are complex.
+// deno-lint-ignore no-explicit-any
+function generateOptionsFromSchema<S extends z.ZodObject<any, any>>(
   schema: S,
-): { generatedParseOptions: InternalGeneratedParseOptions; generatedHelpSections: HelpSection[] } {
+): {
+  generatedParseOptions: InternalGeneratedParseOptions;
+  generatedHelpSections: HelpSection[];
+} {
   const generatedParseOptions: InternalGeneratedParseOptions = {
     string: [],
     boolean: [],
@@ -93,8 +68,12 @@ function generateOptionsFromSchema<S extends z.ZodObject<any, any, any>>(
     let typeHint = "";
 
     // エイリアス処理 (meta情報から取得)
-    // biome-ignore lint/suspicious/noExplicitAny: Accessing Zod internals (_def.meta)
-    const meta = (fieldSchema._def as any).meta as { alias?: string } | undefined;
+    // Reason: Accessing Zod's internal '_def.meta' which is not strongly typed.
+    // deno-lint-ignore no-explicit-any
+    const meta = (fieldSchema._def as any).meta as
+      | { alias?: string }
+
+      | undefined;
     let aliasString = "";
     if (meta?.alias) {
       optionName += `, -${meta.alias}`;
@@ -103,36 +82,36 @@ function generateOptionsFromSchema<S extends z.ZodObject<any, any, any>>(
     }
 
     // 型に応じた処理
-    // biome-ignore lint/suspicious/noExplicitAny: Accessing Zod internals (_def)
-    let fieldDef = fieldSchema._def as any; 
-    let fieldType = fieldDef.typeName;
+    // Reason: Accessing Zod's internal '_def' and its properties.
+    // deno-lint-ignore no-explicit-any
+    let def = fieldSchema._def as any; 
+    let typeName = def.typeName as string; // Use string literal for typeName
 
-    if (fieldType === "ZodOptional" || fieldType === "ZodNullable") {
-      fieldDef = fieldDef.innerType._def;
-      fieldType = fieldDef.typeName;
+    if (typeName === "ZodOptional" || typeName === "ZodNullable") {
+      def = def.innerType._def;
+      typeName = def.typeName;
     }
-    if (fieldType === "ZodDefault") {
-      generatedParseOptions.default[kebabKey] = fieldDef.defaultValue;
-      fieldDef = fieldDef.innerType._def;
-      fieldType = fieldDef.typeName;
+    if (typeName === "ZodDefault") {
+      generatedParseOptions.default[kebabKey] = def.defaultValue();
+      def = def.innerType._def;
+      typeName = def.typeName;
     }
 
-
-    if (fieldType === "ZodString") {
+    if (typeName === "ZodString") {
       generatedParseOptions.string.push(kebabKey);
       if (aliasString) generatedParseOptions.string.push(aliasString);
       typeHint = "<string>";
-    } else if (fieldType === "ZodBoolean") {
+    } else if (typeName === "ZodBoolean") {
       generatedParseOptions.boolean.push(kebabKey);
       if (aliasString) generatedParseOptions.boolean.push(aliasString);
-    } else if (fieldType === "ZodNumber") {
+    } else if (typeName === "ZodNumber") {
       generatedParseOptions.string.push(kebabKey); // 数値も一度文字列として受け取る
       if (aliasString) generatedParseOptions.string.push(aliasString);
       typeHint = "<number>";
-    } else if (fieldType === "ZodEnum") {
+    } else if (typeName === "ZodEnum") {
       generatedParseOptions.string.push(kebabKey);
       if (aliasString) generatedParseOptions.string.push(aliasString);
-      const enumValues = fieldDef.values as string[];
+      const enumValues = def.values as string[];
       typeHint = `<${enumValues.join("|")}>`;
     } else {
       // その他の型はstringとして扱うか、エラーにするか
@@ -145,12 +124,9 @@ function generateOptionsFromSchema<S extends z.ZodObject<any, any, any>>(
     if (generatedParseOptions.default[kebabKey] !== undefined) {
       helpText += ` (デフォルト: ${generatedParseOptions.default[kebabKey]})`;
     }
-    // isOptional() は ZodDefault の場合に true を返すことがあるため、defaultValue の存在も確認
-    // biome-ignore lint/suspicious/noExplicitAny: Accessing Zod internals (_def.typeName)
-    const hasDefaultValue = (fieldSchema._def as any).typeName === "ZodDefault"; 
-    const isOptional = fieldSchema.isOptional() || hasDefaultValue;
+    const isOptional = fieldSchema.isOptional();
     if (!isOptional) {
-         helpText += " (必須)";
+      helpText += " (必須)";
     }
     helpOptions[optionName] = helpText;
   }
@@ -159,7 +135,6 @@ function generateOptionsFromSchema<S extends z.ZodObject<any, any, any>>(
   generatedParseOptions.alias["h"] = "help";
   generatedParseOptions.boolean.push("help");
   helpOptions["--help, -h"] = "ヘルプを表示";
-
 
   const generatedHelpSections: HelpSection[] = [
     {
@@ -171,7 +146,6 @@ function generateOptionsFromSchema<S extends z.ZodObject<any, any, any>>(
   return { generatedParseOptions, generatedHelpSections };
 }
 
-
 /**
  * コマンドライン引数を解析、検証し、ヘルプ表示機能を提供する汎用関数
  * @param rawDenoArgs Deno.argsから取得した生の引数配列
@@ -179,11 +153,14 @@ function generateOptionsFromSchema<S extends z.ZodObject<any, any, any>>(
  * @returns 検証済みの引数オブジェクト (Zodスキーマによって型付けされる)
  * @throws ZodError 検証失敗時にログを出力し、プロセスを終了する
  */
-export function processArgs<S extends z.ZodObject<any, any>>( // 型引数を2つに変更
+// Reason: ZodObject's generic type parameters are complex.
+// deno-lint-ignore no-explicit-any
+export function processArgs<S extends z.ZodObject<any, any>>(
   rawDenoArgs: string[],
   options: ProcessArgsOptions<S>,
 ): z.infer<S> {
-  const { zodSchema, commandName, commandDescription, customHelpGeneration } = options;
+  const { zodSchema, commandName, commandDescription, customHelpGeneration } =
+    options;
 
   let finalParseOptions = options.parseArgsOptions;
   let finalHelpSections = options.helpSections;
@@ -191,12 +168,13 @@ export function processArgs<S extends z.ZodObject<any, any>>( // 型引数を2�
   // logger.debug("clear") // logger を console に置き換えたので、この行はそのまま logger.debug を使う
   console.debug("[deno-lib/args] processArgs: entry");
   if (!finalParseOptions || !finalHelpSections) {
-    console.debug("[deno-lib/args] Generating parseOptions or helpSections from schema...");
-    const { generatedParseOptions, generatedHelpSections } = generateOptionsFromSchema(
-      zodSchema,
-      commandName,
-      commandDescription,
+    console.debug(
+      "[deno-lib/args] Generating parseOptions or helpSections from schema...",
     );
+    const { generatedParseOptions, generatedHelpSections } =
+      generateOptionsFromSchema(
+        zodSchema,
+      );
     if (!finalParseOptions) {
       finalParseOptions = generatedParseOptions;
     }
@@ -205,11 +183,16 @@ export function processArgs<S extends z.ZodObject<any, any>>( // 型引数を2�
     }
   }
   // console.log("clear") // デバッグ用 console.log は削除またはコメントアウト
-  
+
   // parseArgsOptionsに help エイリアスを自動的に追加する (generateOptionsFromSchemaで処理済みなら不要だが念のため)
   const ensuredParseOptions: ParseOptions = {
     ...finalParseOptions,
-    boolean: [...(Array.isArray(finalParseOptions?.boolean) ? finalParseOptions.boolean : []), "help"],
+    boolean: [
+      ...(Array.isArray(finalParseOptions?.boolean)
+        ? finalParseOptions.boolean
+        : []),
+      "help",
+    ],
     alias: { ...(finalParseOptions?.alias || {}), h: "help" },
   };
 
@@ -218,32 +201,39 @@ export function processArgs<S extends z.ZodObject<any, any>>( // 型引数を2�
   console.debug("[deno-lib/args] Raw parsed args:", rawArgs);
   // console.log("clear") // デバッグ用 console.log は削除またはコメントアウト
 
-
   if (rawArgs.help) {
     // console.log(rawArgs) // デバッグ用 console.log は削除またはコメントアウト
-    console.debug("--help オプションが検出されました。ヘルプメッセージを生成・表示します。");
+    console.debug(
+      "--help オプションが検出されました。ヘルプメッセージを生成・表示します。",
+    );
     if (customHelpGeneration) {
-        const helpMsg = customHelpGeneration(zodSchema, commandName, commandDescription);
-        console.info(helpMsg);
-        console.debug("カスタムヘルプメッセージを表示しました。");
+      const helpMsg = customHelpGeneration(
+        zodSchema,
+        commandName,
+        commandDescription,
+      );
+      console.info(helpMsg);
+      console.debug("カスタムヘルプメッセージを表示しました。");
     } else {
-        let helpMessage = `使用方法: ${commandName} [options]\n`;
-        if (commandDescription) {
-          helpMessage += `\n${commandDescription}\n`;
-        }
+      let helpMessage = `使用方法: ${commandName} [options]\n`;
+      if (commandDescription) {
+        helpMessage += `\n${commandDescription}\n`;
+      }
 
-        if (!finalHelpSections || finalHelpSections.length === 0) {
-            console.warn("ヘルプセクションが空または未定義です。スキーマからの自動生成に問題がある可能性があります。");
-        }
+      if (!finalHelpSections || finalHelpSections.length === 0) {
+        console.warn(
+          "ヘルプセクションが空または未定義です。スキーマからの自動生成に問題がある可能性があります。",
+        );
+      }
 
-        for (const section of finalHelpSections || []) {
-          helpMessage += `\n${section.title}:\n`;
-          for (const [opt, desc] of Object.entries(section.options)) {
-            helpMessage += `  ${opt.padEnd(40)}${desc}\n`; // padEndを調整
-          }
+      for (const section of finalHelpSections || []) {
+        helpMessage += `\n${section.title}:\n`;
+        for (const [opt, desc] of Object.entries(section.options)) {
+          helpMessage += `  ${opt.padEnd(40)}${desc}\n`; // padEndを調整
         }
-        console.info(helpMessage);
-        console.debug("自動生成されたヘルプメッセージを表示しました。");
+      }
+      console.info(helpMessage);
+      console.debug("自動生成されたヘルプメッセージを表示しました。");
     }
     Deno.exit(0);
   }
@@ -251,21 +241,31 @@ export function processArgs<S extends z.ZodObject<any, any>>( // 型引数を2�
   try {
     return zodSchema.parse(rawArgs) as z.infer<S>;
   } catch (error) {
-    console.error("引数の検証に失敗しました。", { errorObject: error }); 
+    console.error("引数の検証に失敗しました。", { errorObject: error });
     if (error instanceof z.ZodError) {
       console.info("エラーは ZodError のインスタンスです。");
       // Zod v4では error.issues を使用
       if (Array.isArray(error.issues)) {
-        console.debug("error.issues は配列です。詳細:", { issues: error.issues });
+        console.debug("error.issues は配列です。詳細:", {
+          issues: error.issues,
+        });
         for (const issue of error.issues) {
-          const path = Array.isArray(issue.path) ? issue.path.join(".") : String(issue.path);
-          console.error(`  - (issue) ${path} (${issue.code}): ${issue.message}`);
+          const path = Array.isArray(issue.path)
+            ? issue.path.join(".")
+            : String(issue.path);
+          console.error(
+            `  - (issue) ${path} (${issue.code}): ${issue.message}`,
+          );
         }
       } else {
-        console.error("error.issues が配列ではありません。", { issues: error.issues });
+        console.error("error.issues が配列ではありません。", {
+          issues: error.issues,
+        });
       }
     } else {
-      console.error("エラーは ZodError のインスタンスではありません。", { errorDetails: String(error) });
+      console.error("エラーは ZodError のインスタンスではありません。", {
+        errorDetails: String(error),
+      });
     }
     console.info(`詳細は ${commandName} --help を確認してください。`);
     Deno.exit(1);
