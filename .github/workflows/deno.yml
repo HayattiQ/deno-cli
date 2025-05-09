@@ -1,0 +1,26 @@
+name: Deno CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 # 最新バージョンを指定 (v3でも可)
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x # プロジェクトで使用しているDenoのバージョンに合わせて調整
+
+      - name: Run Deno Lint
+        run: deno lint
+
+      # - name: Run Deno Tests
+      #   run: deno test --allow-all # テストファイルがないためコメントアウト。必要に応じて有効化してください。
