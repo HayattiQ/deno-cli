@@ -69,14 +69,15 @@ function generateOptionsFromSchema<S extends z.ZodObject<any, any>>(
     let typeHint = "";
 
     // description と meta を取得 (Zod公式ドキュメント準拠)
-    // deno-lint-ignore no-explicit-any
-    const meta: { alias?: string; description?: string } | undefined = (fieldSchema as any).meta?.();
+    const meta: { alias?: string; description?: string } | undefined =
+      fieldSchema.meta?.();
     const descriptionFromMeta = meta?.description;
-    // deno-lint-ignore no-explicit-any
-    const descriptionFromSchemaProperty: string | undefined = (fieldSchema as any).description;
+    const descriptionFromSchemaProperty: string | undefined =
+      fieldSchema.description;
 
     // meta.description を優先し、なければ fieldSchema.description をフォールバックとして使用
-    const finalDescription = descriptionFromMeta || descriptionFromSchemaProperty || "";
+    const finalDescription = descriptionFromMeta ||
+      descriptionFromSchemaProperty || "";
     const finalMeta = meta;
 
     // エイリアス処理
@@ -184,7 +185,6 @@ export function processArgs<S extends z.ZodObject<any, any>>(
     const { generatedParseOptions, generatedHelpSections } =
       generateOptionsFromSchema(
         zodSchema,
-        // aliases, // generateOptionsFromSchema に aliases は渡さない
       );
     if (!finalParseOptions) {
       finalParseOptions = generatedParseOptions;
@@ -208,16 +208,14 @@ export function processArgs<S extends z.ZodObject<any, any>>(
 
   const rawArgs = parseArgs(rawDenoArgs, ensuredParseOptions);
 
-  // デバッグログは削除
-  // console.log("DEBUG: rawArgs after parseArgs:", JSON.stringify(rawArgs, null, 2));
-  // console.log("DEBUG: ensuredParseOptions.alias before alias conversion loop:", JSON.stringify(ensuredParseOptions.alias, null, 2));
-
   // エイリアスを元のキー名に変換する処理
   const aliasedArgs = { ...rawArgs };
   if (ensuredParseOptions.alias) {
-    for (const [alias, originalKeyOrKeys] of Object.entries(
-      ensuredParseOptions.alias,
-    )) {
+    for (
+      const [alias, originalKeyOrKeys] of Object.entries(
+        ensuredParseOptions.alias,
+      )
+    ) {
       if (typeof originalKeyOrKeys === "string") {
         const originalKey = originalKeyOrKeys;
         if (alias in aliasedArgs && !(originalKey in aliasedArgs)) {
@@ -226,8 +224,6 @@ export function processArgs<S extends z.ZodObject<any, any>>(
       }
     }
   }
-  // console.log("DEBUG: aliasedArgs before Zod parse:", JSON.stringify(aliasedArgs, null, 2)); // デバッグ完了のためコメントアウト
-
 
   if (rawArgs.help) { // rawArgs.help を参照するのは変更なし
     if (customHelpGeneration) {
@@ -262,7 +258,6 @@ export function processArgs<S extends z.ZodObject<any, any>>(
 
   try {
     const validatedArgs = zodSchema.parse(aliasedArgs) as z.infer<S>;
-    // console.log("DEBUG: final validated args:", JSON.stringify(validatedArgs, null, 2)); // 必要に応じて有効化
     return validatedArgs;
   } catch (error) {
     console.error("引数の検証に失敗しました。", { errorObject: error });
