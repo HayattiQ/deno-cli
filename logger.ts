@@ -14,22 +14,29 @@ import {
  * LogTapeロガーの初期設定を行う関数
  * @param scriptName スクリプト名（カテゴリとして使用）
  * @param logLevel ログレベル
+ * @param logDir ログディレクトリのパス（必須）
  * @returns ログファイルパス
  */
 export async function logConfigure(
 	scriptName: string,
 	logLevel: "debug" | "info" | "warn" | "error",
+	logDir: string, // パラメータ名を customLogDir から logDir に変更
 ): Promise<string> { // 戻り値の型 Promise<string> を追加
 
 	// LogTapeのログレベルに変換
 	const logtapeLevel = logLevel === "warn" ? "warning" : logLevel;
 
-	// ログディレクトリの作成
-	const SCRIPT_DIR = dirname(new URL(import.meta.url).pathname);
-	const LOG_DIR = join(SCRIPT_DIR, "./logs", scriptName);
+	// ログディレクトリの決定
+	const LOG_DIR: string = join(logDir, scriptName); // 変数名も logDir に合わせる
 
 	if (!existsSync(LOG_DIR)) {
-		Deno.mkdirSync(LOG_DIR, { recursive: true });
+		try {
+			Deno.mkdirSync(LOG_DIR, { recursive: true });
+		} catch (e) {
+			// mkdir に失敗した場合、エラーをより詳細に表示
+			console.error(`Failed to create log directory: ${LOG_DIR}`, e);
+			throw e; // エラーを再スロー
+		}
 	}
 
 	// ログファイル名の生成

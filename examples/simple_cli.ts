@@ -7,11 +7,14 @@ import {
 } from "../mod.ts";
 import { baseArgsHelpInfo } from "../schemas.ts"; // ヘルプ情報もインポート
 import type { HelpSection } from "../args.ts"; // HelpSection をインポート
+import { dirname, join } from "jsr:@std/path@^1.0.8";
 
 const SCRIPT_NAME = "simple_cli_example";
 
 async function main() {
-  await logConfigure(SCRIPT_NAME, "debug");
+  const scriptDir = dirname(new URL(import.meta.url).pathname);
+  const logDirectoryPath = join(scriptDir, "cli_logs"); // 変数名を変更
+  await logConfigure(SCRIPT_NAME, "debug", logDirectoryPath); // logDir パラメータとして渡す
   const logger = createLogger(SCRIPT_NAME);
 
   // サンプル用スキーマ定義

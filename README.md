@@ -31,7 +31,7 @@
 ```json
 {
   "imports": {
-    "deno-cli/": "jsr:@hayatti/deno-cli@^0.1.0" // JSRのバージョンは適宜最新のものに置き換えてください
+    "deno-cli/": "jsr:@hayattiq/deno-cli@^0.1.0" // JSRのバージョンは適宜最新のものに置き換えてください
   }
 }
 ```
@@ -55,7 +55,7 @@
 
 ```typescript
 // my_script.ts
-import { BaseArgsSchema, processArgs } from "deno-cli/mod.ts"; // JSR経由の場合は "jsr:@hayatti/deno-cli/mod.ts"
+import { BaseArgsSchema, processArgs } from "jsr:@hayattiq/deno-cli/mod.ts";
 import { z } from "npm:zod"; // プロジェクトのdeno.jsonでzodをimportしている想定
 
 // BaseArgsSchema を拡張して、このスクリプト特有の引数を追加
@@ -95,7 +95,7 @@ try {
 
 ```typescript
 // my_eth_script.ts
-import { EthArgsSchema, processArgs } from "deno-cli/mod.ts";
+import { EthArgsSchema, processArgs } from "jsr:@hayattiq/deno-cli/mod.ts";
 import { z } from "npm:zod";
 
 // EthArgsSchema をベースに、このスクリプト特有の引数を追加
@@ -137,8 +137,8 @@ try {
 
 ```typescript
 // my_script.ts (引数解析の後)
-import { createLogger, logConfigure, type LogLevel } from "deno-cli/mod.ts";
-import { basename } from "jsr:@std/path/basename"; // jsr:@std/path から basename をインポート
+import { createLogger, logConfigure, type LogLevel } from "jsr:@hayattiq/deno-cli/mod.ts";
+import { basename, join } from "jsr:@std/path/mod.ts"; // join もインポート
 
 // スクリプト名を取得 (ログファイル名などに使用)
 const scriptName = basename(new URL(import.meta.url).pathname).replace(
@@ -149,11 +149,14 @@ const scriptName = basename(new URL(import.meta.url).pathname).replace(
 async function run() {
   // ... 引数解析 (args が取得済みとする) ...
   // const args = processArgs(...); // 上記の例を参照
+  // const MyScriptArgsSchema = BaseArgsSchema.extend({ /* ... */ }); // argsの型定義のため
+  // const args = processArgs(Deno.args, { zodSchema: MyScriptArgsSchema, commandName: scriptName });
+
 
   // ログ設定 (コンソールとファイルに出力)
-  // ファイルログは logs/{scriptName}/{scriptName}_{timestamp}.log のような形式で保存されます。
-  // (logConfigure内でディレクトリがなければ作成されます)
-  const logFilePath = await logConfigure(scriptName, args.logLevel as LogLevel); // args.logLevel を使用
+  // ログ出力ディレクトリを指定します。この例ではカレントディレクトリ下の 'script_logs' を使用します。
+  const logDirectory = join(Deno.cwd(), "script_logs");
+  const logFilePath = await logConfigure(scriptName, args.logLevel as LogLevel, logDirectory);
   console.log(`ログファイル: ${logFilePath}`); // ユーザーにログファイルの場所を通知 (任意)
 
   const logger = createLogger(scriptName); // LogTapeのロガーインスタンスを取得
@@ -285,13 +288,12 @@ logger.error(
 で短いエイリアスが設定されており、これらは `processArgs`
 によるヘルプメッセージ自動生成に利用されます。
 
-### `logConfigure(scriptName: string, consoleLogLevel: LogLevel, logDir?: string): Promise<string>`
+### `logConfigure(scriptName: string, consoleLogLevel: LogLevel, logDir: string): Promise<string>`
 
 - ログ出力を設定します。コンソールとファイルの両方に出力します。
 - `scriptName`: ログファイル名やロガー名に使用されます。
 - `consoleLogLevel`: コンソールに出力するログの最低レベル。
-- `logDir` (optional): ログファイルを保存するディレクトリ。デフォルトは
-  `logs/{scriptName}`。
+- `logDir` (必須): ログファイルを保存する親ディレクトリのパス。このディレクトリ直下に `{scriptName}` というサブディレクトリが作成され、その中にログファイルが生成されます。例えば `logDir` に `/var/logs/my_app_logs` を指定し `scriptName` が `my_script` の場合、ログは `/var/logs/my_app_logs/my_script/my_script_timestamp.log` のように保存されます。
 - 戻り値: 生成されたログファイルのフルパス (Promise)。
 
 ### `createLogger(name: string): Logger`
