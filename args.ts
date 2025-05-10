@@ -33,6 +33,11 @@ function camelToKebab(str: string): string {
   return str.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
 }
 
+// ケバブケースをキャメルケースに変換するヘルパー関数
+function kebabToCamel(str: string): string {
+  return str.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+}
+
 /**
  * ZodスキーマからparseArgsのオプションとヘルプセクションを自動生成する内部関数
  */
@@ -208,8 +213,11 @@ export function processArgs<S extends z.ZodObject<any, any>>(
 
   const rawArgs = parseArgs(rawDenoArgs, ensuredParseOptions);
 
-  // エイリアスを元のキー名に変換する処理
-  const aliasedArgs = { ...rawArgs };
+  // エイリアスを元のキー名に変換し、さらにキーをキャメルケースに変換する処理
+  const camelCasedArgs: Record<string, unknown> = {};
+  const tempAliasedArgs = { ...rawArgs }; // parseArgsの結果を一時的に保持
+
+  // 1. エイリアスをケバブケースのフルネームキーに展開
   if (ensuredParseOptions.alias) {
     for (
       const [alias, originalKeyOrKeys] of Object.entries(
@@ -217,15 +225,36 @@ export function processArgs<S extends z.ZodObject<any, any>>(
       )
     ) {
       if (typeof originalKeyOrKeys === "string") {
-        const originalKey = originalKeyOrKeys;
-        if (alias in aliasedArgs && !(originalKey in aliasedArgs)) {
-          aliasedArgs[originalKey] = aliasedArgs[alias];
+        const originalKebabKey = originalKeyOrKeys; // ここではケバブケースのキー
+        if (alias in tempAliasedArgs && !(originalKebabKey in tempAliasedArgs)) {
+          tempAliasedArgs[originalKebabKey] = tempAliasedArgs[alias];
+          // delete tempAliasedArgs[alias]; // 元のエイリアスキーは不要なら削除しても良いが、Zodは未知のキーを無視するので必須ではない
+        }
+      } else if (Array.isArray(originalKeyOrKeys)) {
+        // 配列の場合、最初のものを主要なキーとして扱うか、適切な処理が必要
+        // 今回のスキーマ生成ロジックでは単一文字列を想定しているため、基本的にはここは通らないはず
+        const originalKebabKey = originalKeyOrKeys[0];
+         if (alias in tempAliasedArgs && !(originalKebabKey in tempAliasedArgs)) {
+          tempAliasedArgs[originalKebabKey] = tempAliasedArgs[alias];
         }
       }
     }
   }
 
-  if (rawArgs.help) { // rawArgs.help を参照するのは変更なし
+  // 2. 全てのキーをケバブケースからキャメルケースに変換
+  for (const key in tempAliasedArgs) {
+    if (Object.prototype.hasOwnProperty.call(tempAliasedArgs, key)) {
+      // "_" (アンダースコア) は parseArgs が未定義の引数に使われるため、そのまま保持
+      if (key === "_") {
+        camelCasedArgs[key] = tempAliasedArgs[key];
+      } else {
+        camelCasedArgs[kebabToCamel(key)] = tempAliasedArgs[key];
+      }
+    }
+  }
+
+
+  if (camelCasedArgs.help) { // helpもキャメルケースでチェック
     if (customHelpGeneration) {
       const helpMsg = customHelpGeneration(
         zodSchema,
@@ -257,7 +286,7 @@ export function processArgs<S extends z.ZodObject<any, any>>(
   }
 
   try {
-    const validatedArgs = zodSchema.parse(aliasedArgs) as z.infer<S>;
+    const validatedArgs = zodSchema.parse(camelCasedArgs) as z.infer<S>;
     return validatedArgs;
   } catch (error) {
     console.error("引数の検証に失敗しました。", { errorObject: error });
