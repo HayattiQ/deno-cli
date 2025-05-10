@@ -16,15 +16,16 @@ export interface HelpSection {
 // deno-lint-ignore no-explicit-any
 export interface ProcessArgsOptions<S extends z.ZodObject<any, any>> {
   zodSchema: S;
-  parseArgsOptions?: ParseOptions; // オプショナルに変更
-  helpSections?: HelpSection[]; // オプショナルに変更
+  parseArgsOptions?: ParseOptions;
+  helpSections?: HelpSection[];
   commandName: string;
   commandDescription?: string;
   customHelpGeneration?: (
     schema: S,
     commandName: string,
     commandDescription?: string,
-  ) => string; // カスタムヘルプ生成用
+  ) => string;
+  // aliases?: Record<string, string>; // エイリアスマッピングは不要に戻す
 }
 
 // キャメルケースをケバブケースに変換するヘルパー関数
@@ -48,6 +49,7 @@ interface InternalGeneratedParseOptions
 // deno-lint-ignore no-explicit-any
 function generateOptionsFromSchema<S extends z.ZodObject<any, any>>(
   schema: S,
+  // customAliases?: Record<string, string>, // カスタムエイリアスは不要に戻す
 ): {
   generatedParseOptions: InternalGeneratedParseOptions;
   generatedHelpSections: HelpSection[];
@@ -61,101 +63,76 @@ function generateOptionsFromSchema<S extends z.ZodObject<any, any>>(
   const helpOptions: { [optionAndAlias: string]: string } = {};
 
   for (const key in schema.shape) {
-    const fieldSchema = schema.shape[key] as z.ZodTypeAny; // biome-ignore lint/suspicious/noExplicitAny: Accessing Zod internals
+    const fieldSchema = schema.shape[key] as z.ZodTypeAny;
     const kebabKey = camelToKebab(key);
     let optionName = `--${kebabKey}`;
     let typeHint = "";
 
-    let unwrappedSchema: z.ZodTypeAny = fieldSchema;
-    let descriptionFromSchema = unwrappedSchema.description; // 初期値
-    // Reason: Accessing Zod's internal _def.
+    // description と meta を取得 (Zod公式ドキュメント準拠)
     // deno-lint-ignore no-explicit-any
-    let metaFromSchema = (unwrappedSchema._def as any).meta; // 初期値
-
-    // ZodEffects の場合、内側のスキーマを見る
-    // Reason: Accessing Zod's internal _def.
+    const meta: { alias?: string; description?: string } | undefined = (fieldSchema as any).meta?.();
+    const descriptionFromMeta = meta?.description;
     // deno-lint-ignore no-explicit-any
-    if ((unwrappedSchema._def as any).typeName === "ZodEffects") {
-      // Reason: Accessing Zod's internal _def.
-      // deno-lint-ignore no-explicit-any
-      const effectDef = unwrappedSchema._def as any;
-      descriptionFromSchema = effectDef.description || descriptionFromSchema;
-      metaFromSchema = effectDef.meta || metaFromSchema;
-      unwrappedSchema = effectDef.schema; // 内側のスキーマで unwrappedSchema を更新
-    }
+    const descriptionFromSchemaProperty: string | undefined = (fieldSchema as any).description;
 
-    // currentSchemaForProps と def は (場合によっては ZodEffects を剥がした後の) unwrappedSchema から初期化
-    let currentSchemaForProps: z.ZodTypeAny = unwrappedSchema;
-    // Reason: Accessing Zod's internal '_def' and its properties.
-    // deno-lint-ignore no-explicit-any
-    let def = unwrappedSchema._def as any;
-    let typeName = def.typeName as string;
-
-    // Optional/Default の内側を見る処理
-    if (typeName === "ZodOptional" || typeName === "ZodNullable") {
-      currentSchemaForProps = def.innerType; // currentSchemaForProps を内側の型に更新
-      def = def.innerType._def;
-      typeName = def.typeName;
-      // Optional/Nullable を剥がした後、再度 description/meta を取得し直す
-      // Reason: Accessing Zod's internal _def.
-      // deno-lint-ignore no-explicit-any
-      descriptionFromSchema = (currentSchemaForProps._def as any).description ||
-        descriptionFromSchema;
-      // Reason: Accessing Zod's internal _def.
-      // deno-lint-ignore no-explicit-any
-      metaFromSchema = (currentSchemaForProps._def as any).meta ||
-        metaFromSchema;
-    }
-    if (typeName === "ZodDefault") {
-      generatedParseOptions.default[kebabKey] = def.defaultValue();
-      currentSchemaForProps = def.innerType; // currentSchemaForProps を内側の型に更新
-      def = def.innerType._def;
-      typeName = def.typeName;
-      // Default を剥がした後、再度 description/meta を取得し直す
-      // Reason: Accessing Zod's internal _def.
-      // deno-lint-ignore no-explicit-any
-      descriptionFromSchema = (currentSchemaForProps._def as any).description ||
-        descriptionFromSchema;
-      // Reason: Accessing Zod's internal _def.
-      // deno-lint-ignore no-explicit-any
-      metaFromSchema = (currentSchemaForProps._def as any).meta ||
-        metaFromSchema;
-    }
-
-    const finalDescription = descriptionFromSchema || "";
-    const finalMeta = metaFromSchema;
+    // meta.description を優先し、なければ fieldSchema.description をフォールバックとして使用
+    const finalDescription = descriptionFromMeta || descriptionFromSchemaProperty || "";
+    const finalMeta = meta;
 
     // エイリアス処理
     let aliasString = "";
     if (finalMeta?.alias) {
-      optionName += `, -${finalMeta.alias}`;
       aliasString = finalMeta.alias;
-      generatedParseOptions.alias[finalMeta.alias] = kebabKey;
+      optionName += `, -${aliasString}`;
+      generatedParseOptions.alias[aliasString] = kebabKey;
     }
 
-    if (typeName === "ZodString") {
+    // 型ヒントと型定義の収集
+    let unwrappedSchema: z.ZodTypeAny = fieldSchema;
+    // deno-lint-ignore no-explicit-any
+    let unwrappedDef = unwrappedSchema._def as any;
+    let unwrappedTypeName = unwrappedDef.typeName as string;
+
+    // ZodDefault, ZodOptional, ZodEffects などのラッパーを剥がす
+    while (
+      unwrappedTypeName === "ZodDefault" ||
+      unwrappedTypeName === "ZodOptional" ||
+      unwrappedTypeName === "ZodNullable" ||
+      unwrappedTypeName === "ZodEffects"
+    ) {
+      if (unwrappedTypeName === "ZodDefault") {
+        generatedParseOptions.default[kebabKey] = unwrappedDef.defaultValue();
+      }
+      unwrappedSchema = unwrappedDef.innerType;
+      // deno-lint-ignore no-explicit-any
+      unwrappedDef = unwrappedSchema._def as any;
+      unwrappedTypeName = unwrappedDef.typeName;
+    }
+
+    // 剥がした後の型で判定
+    if (unwrappedTypeName === "ZodString") {
       generatedParseOptions.string.push(kebabKey);
-      if (aliasString) generatedParseOptions.string.push(aliasString);
+      if (aliasString) generatedParseOptions.string.push(aliasString); // エイリアスも型リストに追加
       typeHint = "<string>";
-    } else if (typeName === "ZodBoolean") {
+    } else if (unwrappedTypeName === "ZodBoolean") {
       generatedParseOptions.boolean.push(kebabKey);
-      if (aliasString) generatedParseOptions.boolean.push(aliasString);
-    } else if (typeName === "ZodNumber") {
+      if (aliasString) generatedParseOptions.boolean.push(aliasString); // エイリアスも型リストに追加
+    } else if (unwrappedTypeName === "ZodNumber") {
       generatedParseOptions.string.push(kebabKey); // 数値も一度文字列として受け取る
-      if (aliasString) generatedParseOptions.string.push(aliasString);
+      if (aliasString) generatedParseOptions.string.push(aliasString); // エイリアスも型リストに追加
       typeHint = "<number>";
-    } else if (typeName === "ZodEnum") {
+    } else if (unwrappedTypeName === "ZodEnum") {
       generatedParseOptions.string.push(kebabKey);
-      if (aliasString) generatedParseOptions.string.push(aliasString);
-      const enumValues = def.values as string[]; // Ensure 'def' here refers to the ZodEnumDef
+      if (aliasString) generatedParseOptions.string.push(aliasString); // エイリアスも型リストに追加
+      const enumValues = unwrappedDef.values as string[];
       typeHint = `<${enumValues.join("|")}>`;
     } else {
       // その他の型はstringとして扱うか、エラーにするか
       generatedParseOptions.string.push(kebabKey);
-      if (aliasString) generatedParseOptions.string.push(aliasString);
+      if (aliasString) generatedParseOptions.string.push(aliasString); // エイリアスも型リストに追加
     }
 
-    let helpText = finalDescription; // Use the final determined description
+    let helpText = finalDescription;
     if (typeHint) helpText += ` (${typeHint})`;
     if (generatedParseOptions.default[kebabKey] !== undefined) {
       helpText += ` (デフォルト: ${generatedParseOptions.default[kebabKey]})`;
@@ -180,6 +157,7 @@ function generateOptionsFromSchema<S extends z.ZodObject<any, any>>(
     },
   ];
 
+  // console.log("DEBUG: generatedParseOptions.alias in generateOptionsFromSchema:", JSON.stringify(generatedParseOptions.alias, null, 2)); // デバッグ完了のためコメントアウト
   return { generatedParseOptions, generatedHelpSections };
 }
 
@@ -196,7 +174,7 @@ export function processArgs<S extends z.ZodObject<any, any>>(
   rawDenoArgs: string[],
   options: ProcessArgsOptions<S>,
 ): z.infer<S> {
-  const { zodSchema, commandName, commandDescription, customHelpGeneration } =
+  const { zodSchema, commandName, commandDescription, customHelpGeneration } = // aliases は不要に戻す
     options;
 
   let finalParseOptions = options.parseArgsOptions;
@@ -206,6 +184,7 @@ export function processArgs<S extends z.ZodObject<any, any>>(
     const { generatedParseOptions, generatedHelpSections } =
       generateOptionsFromSchema(
         zodSchema,
+        // aliases, // generateOptionsFromSchema に aliases は渡さない
       );
     if (!finalParseOptions) {
       finalParseOptions = generatedParseOptions;
@@ -229,7 +208,28 @@ export function processArgs<S extends z.ZodObject<any, any>>(
 
   const rawArgs = parseArgs(rawDenoArgs, ensuredParseOptions);
 
-  if (rawArgs.help) {
+  // デバッグログは削除
+  // console.log("DEBUG: rawArgs after parseArgs:", JSON.stringify(rawArgs, null, 2));
+  // console.log("DEBUG: ensuredParseOptions.alias before alias conversion loop:", JSON.stringify(ensuredParseOptions.alias, null, 2));
+
+  // エイリアスを元のキー名に変換する処理
+  const aliasedArgs = { ...rawArgs };
+  if (ensuredParseOptions.alias) {
+    for (const [alias, originalKeyOrKeys] of Object.entries(
+      ensuredParseOptions.alias,
+    )) {
+      if (typeof originalKeyOrKeys === "string") {
+        const originalKey = originalKeyOrKeys;
+        if (alias in aliasedArgs && !(originalKey in aliasedArgs)) {
+          aliasedArgs[originalKey] = aliasedArgs[alias];
+        }
+      }
+    }
+  }
+  // console.log("DEBUG: aliasedArgs before Zod parse:", JSON.stringify(aliasedArgs, null, 2)); // デバッグ完了のためコメントアウト
+
+
+  if (rawArgs.help) { // rawArgs.help を参照するのは変更なし
     if (customHelpGeneration) {
       const helpMsg = customHelpGeneration(
         zodSchema,
@@ -261,7 +261,9 @@ export function processArgs<S extends z.ZodObject<any, any>>(
   }
 
   try {
-    return zodSchema.parse(rawArgs) as z.infer<S>;
+    const validatedArgs = zodSchema.parse(aliasedArgs) as z.infer<S>;
+    // console.log("DEBUG: final validated args:", JSON.stringify(validatedArgs, null, 2)); // 必要に応じて有効化
+    return validatedArgs;
   } catch (error) {
     console.error("引数の検証に失敗しました。", { errorObject: error });
     if (error instanceof z.ZodError) {

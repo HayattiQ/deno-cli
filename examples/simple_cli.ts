@@ -17,8 +17,12 @@ async function main() {
   // サンプル用スキーマ定義
   // BaseArgsSchema を拡張し、name と verbose オプションを追加
   const ExampleSchema = BaseArgsSchema.extend({
-    name: z.string().describe("あなたの名前").meta({ alias: "N" }),
-    verbose: z.boolean().optional().describe("詳細ログ出力").meta({
+    name: z.string().meta({
+      description: "あなたの名前",
+      alias: "N",
+    }),
+    verbose: z.boolean().optional().meta({
+      description: "詳細ログ出力",
       alias: "v",
     }),
   });

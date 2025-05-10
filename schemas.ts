@@ -8,9 +8,10 @@ import type { HelpSection } from "./args.ts"; // HelpSection をインポート
 // Reason: Zod's inferred object shapes can be complex.
 // deno-lint-ignore no-explicit-any
 export const BaseArgsSchema: z.ZodObject<any> = z.object({
-  logLevel: z.enum(["debug", "info", "warn", "error"]).default("info").describe(
-    "ログの出力レベル",
-  ).meta({ alias: "l" }),
+  logLevel: z.enum(["debug", "info", "warn", "error"]).default("info").meta({
+    description: "ログの出力レベル",
+    alias: "l",
+  }),
 });
 
 /**
@@ -22,8 +23,10 @@ export const BaseArgsSchema: z.ZodObject<any> = z.object({
 export const NetworkArgsSchema: z.ZodObject<any> = z.object({
   network: z.enum(["sepolia", "kaia"]) // TODO: 利用可能なネットワークを動的に設定できるようにする
     .default("sepolia")
-    .describe("接続するネットワーク (例: sepolia, kaia)")
-    .meta({ alias: "n" }),
+    .meta({
+      description: "接続するネットワーク (例: sepolia, kaia)",
+      alias: "n",
+    }),
 });
 
 /**
@@ -33,9 +36,10 @@ export const NetworkArgsSchema: z.ZodObject<any> = z.object({
 // Reason: Zod's inferred object shapes can be complex.
 // deno-lint-ignore no-explicit-any
 export const PrivateKeyArgsSchema: z.ZodObject<any> = z.object({
-  privateKey: z.string().optional().describe(
-    "秘密鍵（環境変数からの読み込みを推奨）",
-  ).meta({ alias: "k" }),
+  privateKey: z.string().optional().meta({
+    description: "秘密鍵（環境変数からの読み込みを推奨）",
+    alias: "k",
+  }),
 });
 
 /**
@@ -45,9 +49,10 @@ export const PrivateKeyArgsSchema: z.ZodObject<any> = z.object({
 // Reason: Zod's inferred object shapes can be complex.
 // deno-lint-ignore no-explicit-any
 export const RpcUrlArgsSchema: z.ZodObject<any> = z.object({
-  rpcUrl: z.string().optional().describe(
-    "RPC URL（指定がない場合はデフォルト値を使用）",
-  ).meta({ alias: "r" }),
+  rpcUrl: z.string().optional().meta({
+    description: "RPC URL（指定がない場合はデフォルト値を使用）",
+    alias: "r",
+  }),
 });
 
 export const baseArgsHelpInfo: HelpSection = {
