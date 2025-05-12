@@ -11,22 +11,22 @@ import {
 } from "@logtape/logtape";
 
 /**
- * LogTapeロガーの初期設定を行う関数
+ * ロガーインスタンスを取得し、必要に応じて初期設定を行う関数
  * @param scriptName スクリプト名（カテゴリとして使用）
  * @param logLevel ログレベル
  * @param logDir ログディレクトリのパス（必須）
- * @returns ログファイルパス
+ * @returns ロガーインスタンス
  */
-export async function logConfigure(
+export async function createLogger(
   scriptName: string,
   logLevel: "debug" | "info" | "warn" | "error",
-  logDir: string, // パラメータ名を customLogDir から logDir に変更
-): Promise<string> { // 戻り値の型 Promise<string> を追加
+  logDir: string,
+): Promise<Logger> { // Logger 型を指定し、Promise を返すように変更
   // LogTapeのログレベルに変換
   const logtapeLevel = logLevel === "warn" ? "warning" : logLevel;
 
   // ログディレクトリの決定
-  const LOG_DIR: string = join(logDir, scriptName); // 変数名も logDir に合わせる
+  const LOG_DIR: string = join(logDir, scriptName);
 
   if (!existsSync(LOG_DIR)) {
     try {
@@ -98,15 +98,6 @@ export async function logConfigure(
     ],
   });
 
-  // ログファイルパスを返す（デバッグ用）
-  return LOG_FILE_PATH;
-}
-
-/**
- * ロガーインスタンスを取得する関数
- * @param scriptName スクリプト名（カテゴリ）
- * @returns ロガーインスタンス
- */
-export function createLogger(scriptName: string): Logger { // Logger 型を指定
+  // ログファイルパスを返す代わりにロガーインスタンスを返す
   return getLogger(scriptName);
 }

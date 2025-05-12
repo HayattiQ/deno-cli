@@ -2,7 +2,6 @@ import { z } from "zod@next";
 import {
   BaseArgsSchema,
   createLogger,
-  logConfigure,
   processArgs,
 } from "../mod.ts";
 import { baseArgsHelpInfo } from "../schemas.ts"; // ヘルプ情報もインポート
@@ -14,8 +13,7 @@ const SCRIPT_NAME = "simple_cli_example";
 async function main() {
   const scriptDir = dirname(new URL(import.meta.url).pathname);
   const logDirectoryPath = join(scriptDir, "cli_logs"); // 変数名を変更
-  await logConfigure(SCRIPT_NAME, "debug", logDirectoryPath); // logDir パラメータとして渡す
-  const logger = createLogger(SCRIPT_NAME);
+  const logger = await createLogger(SCRIPT_NAME, "debug", logDirectoryPath);
 
   // サンプル用スキーマ定義
   // BaseArgsSchema を拡張し、name と verbose オプションを追加
