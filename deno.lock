@@ -9,8 +9,11 @@
     "jsr:@std/fs@^1.0.15": "1.0.15",
     "jsr:@std/path@*": "1.0.8",
     "jsr:@std/path@^1.0.8": "1.0.8",
+    "npm:@types/node@*": "22.12.0",
     "npm:neverthrow@*": "8.2.0",
+    "npm:neverthrow@^8.2.0": "8.2.0",
     "npm:viem@*": "2.29.1_zod@3.24.3_ws@8.18.1",
+    "npm:viem@^2.29.2": "2.29.2_zod@3.24.3_ws@8.18.1",
     "npm:zod@*": "3.24.3",
     "npm:zod@next": "4.0.0-beta.20250420T053007"
   },
@@ -73,6 +76,12 @@
         "@scure/base"
       ]
     },
+    "@types/node@22.12.0": {
+      "integrity": "sha512-Fll2FZ1riMjNmlmJOdAyY5pUbkftXslB5DgEzlIuNaiWhXd00FhWxVC/r4yV/4wBb9JfImTu+jiSvXTkJ7F/gA==",
+      "dependencies": [
+        "undici-types"
+      ]
+    },
     "@zod/core@0.8.1": {
       "integrity": "sha512-djj8hPhxIHcG8ptxITaw/Bout5HJZ9NyRbKr95Eilqwt9R0kvITwUQGDU+n+MVdsBIka5KwztmZSLti22F+P0A=="
     },
@@ -112,8 +121,24 @@
         "eventemitter3"
       ]
     },
+    "undici-types@6.20.0": {
+      "integrity": "sha512-Ny6QZ2Nju20vw1SRHe3d9jVu6gJ+4e3+MMpqu7pqE5HT6WsTSlce++GQmK5UXS8mzV8DSYHrQH+Xrf2jVcuKNg=="
+    },
     "viem@2.29.1_zod@3.24.3_ws@8.18.1": {
       "integrity": "sha512-mhLn0vDdsxZ4taB7XYgnIVNvXASm60KyPAkvw4k8uNCQ+HLH+5jUgKvLg4AP3y6VJxsgiVPwqUt0dJANDF5DZA==",
+      "dependencies": [
+        "@noble/curves",
+        "@noble/hashes",
+        "@scure/bip32",
+        "@scure/bip39",
+        "abitype",
+        "isows",
+        "ox",
+        "ws"
+      ]
+    },
+    "viem@2.29.2_zod@3.24.3_ws@8.18.1": {
+      "integrity": "sha512-cukRxab90jvQ+TDD84sU3qB3UmejYqgCw4cX8SfWzvh7JPfZXI3kAMUaT5OSR2As1Mgvx1EJawccwPjGqkSSwA==",
       "dependencies": [
         "@noble/curves",
         "@noble/hashes",
@@ -295,6 +320,8 @@
     "dependencies": [
       "jsr:@logtape/file@~0.9.1",
       "jsr:@logtape/logtape@~0.9.1",
+      "npm:neverthrow@^8.2.0",
+      "npm:viem@^2.29.2",
       "npm:zod@next"
     ]
   }
