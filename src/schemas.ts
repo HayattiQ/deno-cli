@@ -73,3 +73,12 @@ export const EthArgsSchema: typeof BaseArgsSchema = BaseArgsSchema
   .merge(PrivateKeyArgsSchema)
   .merge(RpcUrlArgsSchema)
   .describe("Ethereumネットワーク操作に関連する引数");
+
+export const ethArgsHelpInfo: HelpSection = {
+  title: "Ethereum関連オプション",
+  options: {
+    "--network, -n <sepolia|kaia>": "接続するネットワーク (デフォルト: sepolia)",
+    "--private-key, -k <string>": "秘密鍵（環境変数 PRIVATE_KEY も利用可能）",
+    "--rpc-url, -r <string>": "RPC URL（オプション）",
+  },
+};

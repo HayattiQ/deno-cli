@@ -3,9 +3,9 @@ import {
   BaseArgsSchema,
   createLogger,
   processArgs,
+  type HelpSection, // mod.ts から HelpSection をインポート
+  baseArgsHelpInfo, // mod.ts から baseArgsHelpInfo をインポート
 } from "../mod.ts";
-import { baseArgsHelpInfo } from "../schemas.ts"; // ヘルプ情報もインポート
-import type { HelpSection } from "../args.ts"; // HelpSection をインポート
 import { dirname, join } from "jsr:@std/path@^1.0.8";
 
 const SCRIPT_NAME = "simple_cli_example";
